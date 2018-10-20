@@ -7,6 +7,10 @@ buildscript {
     }
     dependencies {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        //添加jooq依赖
+        classpath 'org.jooq:jooq-codegen:3.11.5'
+        // https://mvnrepository.com/artifact/mysql/mysql-connector-java
+        classpath group: 'mysql', name: 'mysql-connector-java', version: '8.0.12'
     }
 }
 
@@ -27,6 +31,36 @@ repositories {
 dependencies {
     implementation('org.springframework.boot:spring-boot-starter-jooq')
     implementation('org.springframework.boot:spring-boot-starter-web')
-    runtimeOnly('mysql:mysql-connector-java')
+    // https://mvnrepository.com/artifact/mysql/mysql-connector-java
     testImplementation('org.springframework.boot:spring-boot-starter-test')
+    compile group: 'org.jooq', name: 'jooq', version: '3.11.5'
+    runtime group: 'mysql', name: 'mysql-connector-java', version: '8.0.12'
+}
+
+task generateJooq() {
+    // Use your favourite XML builder to construct the code generation configuration file
+    def writer = new StringWriter()
+    def xml = new groovy.xml.MarkupBuilder(writer)
+            .configuration('xmlns': 'http://www.jooq.org/xsd/jooq-codegen-3.11.0.xsd') {
+        jdbc() {
+            driver('com.mysql.jdbc.Driver')
+            url('jdbc:mysql://localhost:3306/commentserver?serverTimezone=Asia/Shanghai&useSSL=false&characterEncoding=utf-8') // src/main/resources/database.db为数据库路径
+            user('root') //不需要用户名，省略
+            //password() //不需要密码，省略
+        }
+        generator() {
+            database() {
+                inputSchema('commentserver') //数据库name
+            }
+
+            target() {
+                packageName('com.kenvix.commenter.dao.jooq') //计划用于存储生成结果的包名
+                directory('src/main/java') //将生成结果储存于src/main/java
+            }
+        }
+    }
+
+    // Run the code generator
+    // ----------------------
+    org.jooq.codegen.GenerationTool.generate(writer.toString())
 }
